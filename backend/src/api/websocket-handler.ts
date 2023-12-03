@@ -211,6 +211,7 @@ class WebsocketHandler {
     if (!_blocks) {
       _blocks = blocks.getBlocks().slice(-config.MEMPOOL.INITIAL_BLOCKS_AMOUNT);
     }
+    const da = difficultyAdjustment.getDifficultyAdjustment();
     return {
       'mempoolInfo': memPool.getMempoolInfo(),
       'vBytesPerSecond': memPool.getVBytesPerSecond(),
@@ -220,7 +221,7 @@ class WebsocketHandler {
       'transactions': memPool.getLatestTransactions(),
       'backendInfo': backendInfo.getBackendInfo(),
       'loadingIndicators': loadingIndicators.getLoadingIndicators(),
-      'da': difficultyAdjustment.getDifficultyAdjustment(),
+      'da': da?.previousTime ? da : undefined,
       'fees': feeApi.getRecommendedFee(),
       ...this.extraInitProperties
     };
@@ -278,7 +279,9 @@ class WebsocketHandler {
         response['mempoolInfo'] = mempoolInfo;
         response['vBytesPerSecond'] = vBytesPerSecond;
         response['transactions'] = newTransactions.slice(0, 6).map((tx) => Common.stripTransaction(tx));
-        response['da'] = da;
+        if (da?.previousTime) {
+          response['da'] = da;
+        }
         response['fees'] = recommendedFees;
       }
 
@@ -432,7 +435,7 @@ class WebsocketHandler {
       }
 
       if (Common.indexingEnabled() && memPool.isInSync()) {
-        const { censored, added, fresh, score } = Audit.auditBlock(transactions, projectedBlocks, auditMempool);
+        const { censored, added, fresh, score, similarity } = Audit.auditBlock(transactions, projectedBlocks, auditMempool);
         const matchRate = Math.round(score * 100 * 100) / 100;
 
         const stripped = projectedBlocks[0]?.transactions ? projectedBlocks[0].transactions.map((tx) => {
@@ -464,7 +467,13 @@ class WebsocketHandler {
 
         if (block.extras) {
           block.extras.matchRate = matchRate;
+          block.extras.similarity = similarity;
         }
+      }
+    } else if (block.extras) {
+      const mBlocks = mempoolBlocks.getMempoolBlocksWithTransactions();
+      if (mBlocks?.length && mBlocks[0].transactions) {
+        block.extras.similarity = Common.getSimilarity(mBlocks[0], transactions);
       }
     }
 
@@ -499,7 +508,7 @@ class WebsocketHandler {
       const response = {
         'block': block,
         'mempoolInfo': memPool.getMempoolInfo(),
-        'da': da,
+        'da': da?.previousTime ? da : undefined,
         'fees': fees,
       };
 

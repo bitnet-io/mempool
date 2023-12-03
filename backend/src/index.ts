@@ -178,6 +178,7 @@ class Server {
           logger.debug(msg);
         }
       }
+      memPool.deleteExpiredTransactions();
       await blocks.$updateBlocks();
       await memPool.$updateMempool();
       indexer.$run();
@@ -215,11 +216,11 @@ class Server {
       await lightningStatsUpdater.$startService();
       await forensicsService.$startService();
     } catch(e) {
-      logger.err(`Nodejs lightning backend crashed. Restarting in 1 minute. Reason: ${(e instanceof Error ? e.message : e)}`);
+      logger.err(`Exception in $runLightningBackend. Restarting in 1 minute. Reason: ${(e instanceof Error ? e.message : e)}`);
       await Common.sleep$(1000 * 60);
       this.$runLightningBackend();
     };
-}
+  }
 
   setUpWebsocketHandling(): void {
     if (this.wss) {

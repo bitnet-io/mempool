@@ -33,9 +33,11 @@ export interface DifficultyAdjustment {
   remainingBlocks: number;
   remainingTime: number;
   previousRetarget: number;
+  previousTime: number;
   nextRetargetHeight: number;
   timeAvg: number;
   timeOffset: number;
+  expectedBlocks: number;
 }
 
 export interface AddressInformation {
@@ -105,8 +107,8 @@ export interface PoolStat {
     '1w': number,
   };
   estimatedHashrate: number;
-  reportedHashrate: number;
-  luck?: number;
+  avgBlockHealth: number;
+  totalReward: number;
 }
 
 export interface BlockExtension {
@@ -116,6 +118,7 @@ export interface BlockExtension {
   reward?: number;
   coinbaseRaw?: string;
   matchRate?: number;
+  similarity?: number;
   pool?: {
     id: number;
     name: string;

@@ -6,6 +6,7 @@ import { ReplaySubject, merge, Subscription, of } from 'rxjs';
 import { tap, switchMap } from 'rxjs/operators';
 import { ApiService } from '../../services/api.service';
 import { RelativeUrlPipe } from '../../shared/pipes/relative-url/relative-url.pipe';
+import { AssetsService } from '../../services/assets.service';
 
 interface SvgLine {
   path: string;
@@ -30,6 +31,7 @@ interface Xput {
   pegout?: string;
   confidential?: boolean;
   timestamp?: number;
+  asset?: string;
 }
 
 @Component({
@@ -71,6 +73,7 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
   zeroValueWidth = 60;
   zeroValueThickness = 20;
   hasLine: boolean;
+  assetsMinimal: any;
 
   outspendsSubscription: Subscription;
   refreshOutspends$: ReplaySubject<string> = new ReplaySubject();
@@ -95,6 +98,7 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
     private relativeUrlPipe: RelativeUrlPipe,
     private stateService: StateService,
     private apiService: ApiService,
+    private assetsService: AssetsService,
     @Inject(LOCALE_ID) private locale: string,
   ) {
     if (this.locale.startsWith('ar') || this.locale.startsWith('fa') || this.locale.startsWith('he')) {
@@ -104,6 +108,12 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
 
   ngOnInit(): void {
     this.initGraph();
+
+    if (this.network === 'liquid' || this.network === 'liquidtestnet') {
+      this.assetsService.getAssetsMinimalJson$.subscribe((assets) => {
+        this.assetsMinimal = assets;
+      });
+    }
 
     this.outspendsSubscription = merge(
       this.refreshOutspends$
@@ -162,7 +172,8 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
         index: i,
         pegout: v?.pegout?.scriptpubkey_address,
         confidential: (this.isLiquid && v?.value === undefined),
-        timestamp: this.tx.status.block_time
+        timestamp: this.tx.status.block_time,
+        asset: v?.asset,
       } as Xput;
     });
 
@@ -182,7 +193,8 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
         coinbase: v?.is_coinbase,
         pegin: v?.is_pegin,
         confidential: (this.isLiquid && v?.prevout?.value === undefined),
-        timestamp: this.tx.status.block_time
+        timestamp: this.tx.status.block_time,
+        asset: v?.prevout?.asset,
       } as Xput;
     });
 
@@ -208,8 +220,8 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
     this.outputs = this.initLines('out', voutWithFee, totalValue, this.maxStrands);
 
     this.middle = {
-      path: `M ${(this.width / 2) - this.midWidth} ${(this.height / 2) + 0.5} L ${(this.width / 2) + this.midWidth} ${(this.height / 2) + 0.5}`,
-      style: `stroke-width: ${this.combinedWeight + 1}; stroke: ${this.gradient[1]}`
+      path: `M ${(this.width / 2) - this.midWidth} ${(this.height / 2) + 0.25} L ${(this.width / 2) + this.midWidth} ${(this.height / 2) + 0.25}`,
+      style: `stroke-width: ${this.combinedWeight + 0.5}; stroke: ${this.gradient[1]}`
     };
 
     this.hasLine = this.inputs.reduce((line, put) => line || !put.zeroValue, false)
@@ -266,7 +278,7 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
     const lineParams = weights.map((w, i) => {
       return {
         weight: w,
-        thickness: xputs[i].value === 0 ? this.zeroValueThickness : Math.max(this.minWeight - 1, w) + 1,
+        thickness: xputs[i].value === 0 ? this.zeroValueThickness : Math.min(this.combinedWeight + 0.5, Math.max(this.minWeight - 1, w) + 1),
         offset: 0,
         innerY: 0,
         outerY: 0,
@@ -278,7 +290,7 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
 
     // bounds of the middle segment
     const innerTop = (this.height / 2) - (this.combinedWeight / 2);
-    const innerBottom = innerTop + this.combinedWeight;
+    const innerBottom = innerTop + this.combinedWeight + 0.5;
     // tracks the visual bottom of the endpoints of the previous line
     let lastOuter = 0;
     let lastInner = innerTop;
@@ -303,7 +315,7 @@ export class TxBowtieGraphComponent implements OnInit, OnChanges {
 
       // set the vertical position of the (center of the) outer side of the line
       line.outerY = lastOuter + (line.thickness / 2);
-      line.innerY = Math.min(innerBottom + (line.thickness / 2), Math.max(innerTop + (line.thickness / 2), lastInner + (line.weight / 2)));
+      line.innerY = Math.min(innerBottom - (line.thickness / 2), Math.max(innerTop + (line.thickness / 2), lastInner + (line.weight / 2)));
 
       // special case to center single input/outputs
       if (xputs.length === 1) {

@@ -13,6 +13,7 @@ import BlocksAuditsRepository from '../../repositories/BlocksAuditsRepository';
 import PricesRepository from '../../repositories/PricesRepository';
 import { bitcoinCoreApi } from '../bitcoin/bitcoin-api-factory';
 import { IEsploraApi } from '../bitcoin/esplora-api.interface';
+import database from '../../database';
 
 class Mining {
   private blocksPriceIndexingRunning = false;
@@ -141,6 +142,9 @@ class Mining {
     const blockCount1w: number = await BlocksRepository.$blockCount(pool.id, '1w');
     const totalBlock1w: number = await BlocksRepository.$blockCount(null, '1w');
 
+    const avgHealth = await BlocksRepository.$getAvgBlockHealthPerPoolId(pool.id);    
+    const totalReward = await BlocksRepository.$getTotalRewardForPoolId(pool.id);    
+
     let currentEstimatedHashrate = 0;
     try {
       currentEstimatedHashrate = await bitcoinClient.getNetworkHashPs(totalBlock24h);
@@ -162,6 +166,8 @@ class Mining {
       },
       estimatedHashrate: currentEstimatedHashrate * (blockCount24h / totalBlock24h),
       reportedHashrate: null,
+      avgBlockHealth: avgHealth,
+      totalReward: totalReward,
     };
   }
 
@@ -568,6 +574,7 @@ class Mining {
 
   private getTimeRange(interval: string | null, scale = 1): number {
     switch (interval) {
+      case '4y': return 43200 * scale; // 12h
       case '3y': return 43200 * scale; // 12h
       case '2y': return 28800 * scale; // 8h
       case '1y': return 28800 * scale; // 8h
