@@ -16,7 +16,7 @@ interface CandleApiResponse {
 
 class XeggexApi implements PriceFeed {
   public name: string = 'Xeggex';
-  public currencies: string[] = ['USDT'];
+  public currencies: string[] = ['BIT_USDT'];
 
   public url: string = 'https://api.xeggex.com/api/v2/market/getbysymbol/';
   public urlHist: string = 'https://api.gemini.com/v2/candles/BTC{CURRENCY}/{GRANULARITY}';
