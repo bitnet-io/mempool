@@ -1018,5 +1018,27 @@
             "Mined by MW"
         ],
         "link": ""
+    },
+    {
+        "id": 96,
+        "name": "BNOMP.IO",
+        "addresses": [
+            "BJiXNNGLxcVnGnJj5TuKH6qaZ4F3ZdJM8n"
+        ],
+        "tags": [
+            "/B-NOMP/"
+        ],
+        "link": "https://bnomp.io"
+    },
+    {
+        "id": 97,
+        "name": "ANOMP.CC",
+        "addresses": [
+            "BJiXNNGLxcVnGnJj5TuKH6qaZ4F3ZdJM8n"
+        ],
+        "tags": [
+            "/A-NOMP/"
+        ],
+        "link": "https://anomp.cc"
     }
 ]
